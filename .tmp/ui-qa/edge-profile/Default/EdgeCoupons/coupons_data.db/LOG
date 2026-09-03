@@ -1,0 +1,5 @@
+2026/09/03-14:13:27.142 89d0 Creating DB C:\lg_G\PdfSense\.tmp\ui-qa\edge-profile\Default\EdgeCoupons/coupons_data.db since it was missing.
+2026/09/03-14:13:27.160 89d0 Reusing MANIFEST C:\lg_G\PdfSense\.tmp\ui-qa\edge-profile\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/09/03-14:13:27.468 88e0 Level-0 table #5: started
+2026/09/03-14:13:27.473 88e0 Level-0 table #5: 683273 bytes OK
+2026/09/03-14:13:27.475 88e0 Delete type=0 #3
