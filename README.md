@@ -80,6 +80,8 @@ Copy-Item .env.example .env
 
 Set `HF_TOKEN`, `GROQ_API_KEY`, `MONGODB_URI`, and a random `JWT_SECRET_KEY` of at least 32 characters in `backend/.env`, then start the API. The example URI expects MongoDB on `localhost:27017`; `docker compose up -d mongodb` starts that dependency when Docker is available.
 
+When using MongoDB Atlas, copy the Python driver connection string from Atlas. If you substitute credentials manually, percent-encode reserved characters in the username or password; an unescaped `@`, `:`, `/`, `?`, `#`, `[`, or `]` makes the URI invalid.
+
 ```powershell
 uvicorn app.main:app --reload --port 8000
 ```

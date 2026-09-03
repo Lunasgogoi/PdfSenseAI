@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from app.core.config import settings
 from app.services.account_service import (
     AccountServiceError,
+    DatabaseConfigurationError,
     get_account_repository,
 )
 
@@ -26,7 +27,7 @@ class ReadinessChecks(BaseModel):
     storage: Literal["ready", "unavailable"]
     hugging_face: Literal["configured", "missing"]
     groq: Literal["configured", "missing"]
-    mongodb: Literal["ready", "missing", "unavailable"]
+    mongodb: Literal["ready", "missing", "invalid", "unavailable"]
     authentication: Literal["configured", "missing"]
 
 
@@ -68,13 +69,15 @@ def readiness(response: Response) -> ReadinessResponse:
     authentication_ready = bool(
         settings.jwt_secret_key and len(settings.jwt_secret_key) >= 32
     )
-    mongodb_status: Literal["ready", "missing", "unavailable"]
+    mongodb_status: Literal["ready", "missing", "invalid", "unavailable"]
     if not settings.mongodb_uri:
         mongodb_status = "missing"
     else:
         try:
             get_account_repository().ping()
             mongodb_status = "ready"
+        except DatabaseConfigurationError:
+            mongodb_status = "invalid"
         except AccountServiceError:
             mongodb_status = "unavailable"
     is_ready = (

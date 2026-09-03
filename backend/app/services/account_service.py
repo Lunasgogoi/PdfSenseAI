@@ -10,7 +10,7 @@ from typing import Any, Protocol
 from uuid import uuid4
 
 from pymongo import ASCENDING, DESCENDING, MongoClient, ReturnDocument
-from pymongo.errors import DuplicateKeyError, PyMongoError
+from pymongo.errors import ConfigurationError, DuplicateKeyError, PyMongoError
 from pymongo.server_api import ServerApi
 
 from app.core.config import settings
@@ -170,6 +170,8 @@ class MongoAccountRepository:
                 self.chat_turns.create_index(
                     [("owner_id", ASCENDING), ("document_id", ASCENDING), ("created_at", ASCENDING)]
                 )
+            except ConfigurationError as exc:
+                raise DatabaseConfigurationError("MONGODB_URI is invalid.") from exc
             except PyMongoError as exc:
                 raise DatabaseUnavailableError("MongoDB is unavailable.") from exc
             self._ready = True
@@ -418,11 +420,14 @@ def _repository(uri: str, database_name: str, timeout_ms: int) -> MongoAccountRe
 def get_account_repository() -> AccountRepository:
     if not settings.mongodb_uri:
         raise DatabaseConfigurationError("MONGODB_URI is required.")
-    return _repository(
-        settings.mongodb_uri,
-        settings.mongodb_database,
-        settings.mongodb_timeout_ms,
-    )
+    try:
+        return _repository(
+            settings.mongodb_uri,
+            settings.mongodb_database,
+            settings.mongodb_timeout_ms,
+        )
+    except (PyMongoError, ValueError) as exc:
+        raise DatabaseConfigurationError("MONGODB_URI is invalid.") from exc
 
 
 def clear_account_repository_cache() -> None:
