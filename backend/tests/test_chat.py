@@ -23,6 +23,7 @@ from app.services.llm_service import (
     LLMTimeoutError,
 )
 from app.services.rag_service import NOT_FOUND_ANSWER
+from tests.fakes import install_test_auth, remove_test_auth
 from tests.test_document_ingestion import make_pdf
 
 
@@ -45,10 +46,12 @@ class ChatAPITests(unittest.TestCase):
             side_effect=self._document_embeddings,
         )
         self.document_embedding_patcher.start()
+        self.account_repository = install_test_auth(app)
         self.client = TestClient(app)
 
     def tearDown(self) -> None:
         self.client.close()
+        remove_test_auth(app)
         self.document_embedding_patcher.stop()
         settings.upload_dir = self.previous_upload_dir
         settings.vector_store_dir = self.previous_vector_store_dir
@@ -115,6 +118,25 @@ class ChatAPITests(unittest.TestCase):
         self.assertIn("revenue", payload["citations"][0]["excerpt"].lower())
         self.assertTrue(
             payload["citations"][0]["chunk_id"].startswith(document["document_id"])
+        )
+
+        history = self.client.get(
+            f"/api/documents/{document['document_id']}/chat-history"
+        )
+        self.assertEqual(history.status_code, 200, history.text)
+        self.assertEqual(len(history.json()["turns"]), 1)
+        self.assertEqual(history.json()["turns"][0]["query"], "How did revenue change?")
+        self.assertEqual(history.json()["turns"][0]["citations"][0]["page_number"], 2)
+
+        cleared = self.client.delete(
+            f"/api/documents/{document['document_id']}/chat-history"
+        )
+        self.assertEqual(cleared.status_code, 204)
+        self.assertEqual(
+            self.client.get(
+                f"/api/documents/{document['document_id']}/chat-history"
+            ).json()["turns"],
+            [],
         )
 
     def test_out_of_document_answer_is_explicit(self) -> None:

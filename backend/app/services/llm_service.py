@@ -7,7 +7,6 @@ from typing import Any, Sequence
 
 from app.core.config import settings
 
-
 _client: Any | None = None
 _client_lock = Lock()
 

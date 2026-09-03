@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { GraduationCap, Menu, MessageSquareText, Sparkles } from 'lucide-react'
-import { deleteDocument, listDocuments, uploadPdf } from './api'
+import { GraduationCap, LoaderCircle, LogOut, Menu, MessageSquareText, Sparkles } from 'lucide-react'
+import {
+  deleteDocument,
+  getCurrentUser,
+  listDocuments,
+  logoutAccount,
+  uploadPdf,
+} from './api'
+import AuthScreen from './components/AuthScreen'
 import ChatPanel from './components/ChatPanel'
 import DocumentSidebar from './components/DocumentSidebar'
 import EmptyWorkspace from './components/EmptyWorkspace'
@@ -15,6 +22,8 @@ const tabs = [
 ]
 
 function App() {
+  const [user, setUser] = useState(null)
+  const [sessionLoading, setSessionLoading] = useState(true)
   const [documents, setDocuments] = useState([])
   const [selectedDocumentId, setSelectedDocumentId] = useState(null)
   const [activeTab, setActiveTab] = useState('chat')
@@ -51,24 +60,49 @@ function App() {
     }
   }, [])
 
+  const refreshUser = useCallback(async () => {
+    const currentUser = await getCurrentUser()
+    setUser(currentUser)
+  }, [])
+
   useEffect(() => {
     let active = true
-    listDocuments()
-      .then((nextDocuments) => {
+    getCurrentUser()
+      .then(async (currentUser) => {
         if (!active) return
-        setDocuments(nextDocuments)
-        setSelectedDocumentId(nextDocuments[0]?.document_id ?? null)
+        setUser(currentUser)
+        if (currentUser) await refreshDocuments()
+        else setLoadingDocuments(false)
       })
       .catch((error) => {
         if (active) setToast({ type: 'error', message: error.message })
       })
       .finally(() => {
-        if (active) setLoadingDocuments(false)
+        if (active) setSessionLoading(false)
       })
     return () => {
       active = false
     }
-  }, [])
+  }, [refreshDocuments])
+
+  const handleAuthenticated = async (authenticatedUser) => {
+    setUser(authenticatedUser)
+    setLoadingDocuments(true)
+    await refreshDocuments()
+  }
+
+  const handleLogout = async () => {
+    try {
+      await logoutAccount()
+    } catch (error) {
+      setToast({ type: 'error', message: error.message })
+      return
+    }
+    setUser(null)
+    setDocuments([])
+    setSelectedDocumentId(null)
+    setActiveTab('chat')
+  }
 
   const handleUpload = async (file) => {
     if (!file) return
@@ -93,6 +127,11 @@ function App() {
       setToast({ type: 'error', message: error.message })
     } finally {
       setUploadState({ active: false, progress: 0 })
+      try {
+        await refreshUser()
+      } catch {
+        // The upload result remains usable if the quota refresh is interrupted.
+      }
     }
   }
 
@@ -114,6 +153,19 @@ function App() {
     }
   }
 
+  if (sessionLoading) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-slate-950 text-white">
+        <div className="flex items-center gap-3 text-sm font-bold">
+          <LoaderCircle className="animate-spin text-violet-400" size={20} />
+          Opening PdfSense…
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) return <AuthScreen onAuthenticated={handleAuthenticated} />
+
   return (
     <div className="min-h-screen bg-[#f5f6f8] text-slate-900">
       <div className="mx-auto flex min-h-screen max-w-[1800px]">
@@ -131,6 +183,7 @@ function App() {
             setSidebarOpen(false)
           }}
           onDelete={handleDeleteDocument}
+          quota={user.quota}
         />
 
         {sidebarOpen && (
@@ -163,9 +216,14 @@ function App() {
               </div>
             </div>
 
-            <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500 shadow-sm sm:flex">
-              <span className="size-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
-              Local workspace
+            <div className="flex items-center gap-2">
+              <div className="hidden text-right md:block">
+                <p className="max-w-48 truncate text-xs font-bold text-slate-700">{user.email}</p>
+                <p className="text-[10px] font-semibold text-slate-400">{user.quota.daily_ai_remaining} AI requests left today</p>
+              </div>
+              <button type="button" aria-label="Sign out" title="Sign out" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-rose-200 hover:text-rose-600" onClick={handleLogout}>
+                <LogOut size={17} />
+              </button>
             </div>
           </header>
 
@@ -204,16 +262,17 @@ function App() {
 
               <div className="min-h-0 flex-1">
                 {activeTab === 'chat' && (
-                  <ChatPanel key={`chat-${selectedDocument.document_id}`} document={selectedDocument} />
+                  <ChatPanel key={`chat-${selectedDocument.document_id}`} document={selectedDocument} onQuotaChange={refreshUser} />
                 )}
                 {activeTab === 'summary' && (
                   <SummaryPanel
                     key={`summary-${selectedDocument.document_id}`}
                     document={selectedDocument}
+                    onQuotaChange={refreshUser}
                   />
                 )}
                 {activeTab === 'study' && (
-                  <StudyPanel key={`study-${selectedDocument.document_id}`} document={selectedDocument} />
+                  <StudyPanel key={`study-${selectedDocument.document_id}`} document={selectedDocument} onQuotaChange={refreshUser} />
                 )}
               </div>
             </div>

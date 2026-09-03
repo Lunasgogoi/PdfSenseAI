@@ -6,16 +6,17 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 from uuid import UUID, uuid4
 
-import pymupdf
 import numpy as np
+import pymupdf
 from fastapi.testclient import TestClient
-from unittest.mock import patch
 
 from app.core.config import settings
 from app.main import app
 from app.services.embedding_service import EmbeddingGenerationError
+from tests.fakes import install_test_auth, remove_test_auth
 
 
 def make_pdf(page_texts: list[str], *, password: str | None = None) -> bytes:
@@ -57,10 +58,12 @@ class DocumentIngestionTests(unittest.TestCase):
             side_effect=self._fake_embeddings,
         )
         self.mock_embed_documents = self.embedding_patcher.start()
+        self.account_repository = install_test_auth(app)
         self.client = TestClient(app)
 
     def tearDown(self) -> None:
         self.client.close()
+        remove_test_auth(app)
         self.embedding_patcher.stop()
         settings.upload_dir = self.previous_upload_dir
         settings.vector_store_dir = self.previous_vector_store_dir

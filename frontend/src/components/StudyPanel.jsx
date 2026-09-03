@@ -119,7 +119,7 @@ function Flashcard({ card, index }) {
   )
 }
 
-function StudyPanel({ document }) {
+function StudyPanel({ document, onQuotaChange }) {
   const [mcqCount, setMcqCount] = useState(5)
   const [flashcardCount, setFlashcardCount] = useState(5)
   const [materials, setMaterials] = useState(null)
@@ -146,6 +146,7 @@ function StudyPanel({ document }) {
       setError(requestError.message)
     } finally {
       setLoading(false)
+      onQuotaChange?.()
     }
   }
 

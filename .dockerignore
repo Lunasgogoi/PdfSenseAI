@@ -1,0 +1,16 @@
+.git
+.github
+.vscode
+.agents
+.codex
+.tmp
+**/.env
+**/.venv
+**/__pycache__
+**/*.pyc
+backend/uploads
+backend/vector_store
+frontend/node_modules
+frontend/dist
+*.log
+ui-desktop.png

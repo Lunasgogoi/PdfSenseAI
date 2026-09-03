@@ -2,23 +2,15 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter
 from pydantic import BaseModel, Field, field_validator
 
 from app.core.config import settings
-from app.services.document_service import DocumentNotFoundError, DocumentStorageError
-from app.services.embedding_service import (
-    EmbeddingConfigurationError,
-    EmbeddingGenerationError,
-)
+from app.core.dependencies import CurrentUser, Repository
 from app.services.retrieval_service import (
-    DocumentNotReadyError,
-    InvalidSearchRequestError,
     SearchResult,
     search_document,
 )
-from app.services.vector_service import VectorIndexNotFoundError, VectorServiceError
-
 
 router = APIRouter(prefix="/api/documents", tags=["search"])
 
@@ -67,32 +59,18 @@ def _result_response(result: SearchResult) -> SearchResultResponse:
 
 
 @router.post("/{document_id}/search", response_model=SearchResponse)
-def search_document_chunks(document_id: UUID, request: SearchRequest) -> SearchResponse:
+def search_document_chunks(
+    document_id: UUID,
+    request: SearchRequest,
+    user: CurrentUser,
+    repository: Repository,
+) -> SearchResponse:
     """Search one ready document using normalized cosine similarity."""
 
-    try:
-        results = search_document(str(document_id), request.query, request.top_k)
-    except DocumentNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    except (DocumentNotReadyError, VectorIndexNotFoundError) as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-    except EmbeddingConfigurationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-        ) from exc
-    except EmbeddingGenerationError as exc:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
-    except InvalidSearchRequestError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=str(exc),
-        ) from exc
-    except (DocumentStorageError, VectorServiceError) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        ) from exc
+    normalized_id = str(document_id)
+    repository.assert_document_owner(user.user_id, normalized_id)
+    repository.consume_ai_request(user.user_id)
+    results = search_document(normalized_id, request.query, request.top_k)
 
     return SearchResponse(
         document_id=document_id,

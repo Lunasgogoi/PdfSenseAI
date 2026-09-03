@@ -38,6 +38,7 @@ function DocumentSidebar({
   onUpload,
   onSelect,
   onDelete,
+  quota,
 }) {
   return (
     <aside
@@ -147,7 +148,7 @@ function DocumentSidebar({
 
       <div className="flex items-center gap-3 border-t border-slate-800/90 px-5 py-4 text-xs text-slate-500">
         <Layers3 size={15} />
-        <span>Local, isolated workspaces</span>
+        <span>{quota.documents_remaining} of {quota.document_limit} document slots left</span>
         <PanelLeftClose className="ml-auto hidden text-slate-700 lg:block" size={15} />
       </div>
     </aside>

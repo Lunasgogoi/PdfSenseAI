@@ -8,9 +8,10 @@ import {
   LoaderCircle,
   MessageSquareText,
   Quote,
+  Trash2,
   UserRound,
 } from 'lucide-react'
-import { askDocument } from '../api'
+import { askDocument, clearChatHistory, getChatHistory } from '../api'
 
 const suggestions = [
   'What is the main idea of this document?',
@@ -36,12 +37,41 @@ function CitationCard({ citation, index }) {
   )
 }
 
-function ChatPanel({ document }) {
+function ChatPanel({ document, onQuotaChange }) {
   const [messages, setMessages] = useState([])
+  const [historyLoading, setHistoryLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const bottomRef = useRef(null)
+
+  useEffect(() => {
+    let active = true
+    getChatHistory(document.document_id)
+      .then((history) => {
+        if (!active) return
+        setMessages(
+          history.turns.flatMap((turn) => [
+            { id: `${turn.turn_id}-question`, role: 'user', text: turn.query },
+            {
+              id: `${turn.turn_id}-answer`,
+              role: 'assistant',
+              text: turn.answer,
+              citations: turn.citations,
+            },
+          ]),
+        )
+      })
+      .catch((requestError) => {
+        if (active) setError(requestError.message)
+      })
+      .finally(() => {
+        if (active) setHistoryLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [document.document_id])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
@@ -74,13 +104,34 @@ function ChatPanel({ document }) {
       setError(requestError.message)
     } finally {
       setLoading(false)
+      onQuotaChange?.()
+    }
+  }
+
+  const clearConversation = async () => {
+    setError('')
+    try {
+      await clearChatHistory(document.document_id)
+      setMessages([])
+    } catch (requestError) {
+      setError(requestError.message)
     }
   }
 
   return (
     <div className="mx-auto flex h-[calc(100vh-141px)] w-full max-w-5xl flex-col px-4 sm:px-7 lg:px-10">
+      <div className="flex min-h-12 shrink-0 items-center justify-between border-b border-slate-200/70">
+        <p className="text-xs font-bold text-slate-400">Saved conversation</p>
+        <button type="button" disabled={messages.length === 0 || loading} className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40" onClick={clearConversation}>
+          <Trash2 size={14} /> Clear
+        </button>
+      </div>
       <div className="scrollbar-light min-h-0 flex-1 overflow-y-auto py-6 sm:py-8">
-        {messages.length === 0 ? (
+        {historyLoading ? (
+          <div className="flex min-h-full items-center justify-center gap-2 text-sm font-semibold text-slate-400">
+            <LoaderCircle className="animate-spin text-violet-600" size={17} /> Loading conversation…
+          </div>
+        ) : messages.length === 0 ? (
           <div className="mx-auto flex min-h-full max-w-2xl flex-col items-center justify-center pb-8 text-center">
             <div className="grid size-14 place-items-center rounded-2xl bg-violet-100 text-violet-700">
               <MessageSquareText size={25} />

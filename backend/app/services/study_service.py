@@ -8,7 +8,11 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from app.core.config import settings
 from app.services.document_service import DocumentChunk, get_document, load_document_chunks
-from app.services.llm_service import LLMConfigurationError, LLMResponseError, generate_json_completion
+from app.services.llm_service import (
+    LLMConfigurationError,
+    LLMResponseError,
+    generate_json_completion,
+)
 
 
 class StudyServiceError(RuntimeError):

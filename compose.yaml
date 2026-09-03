@@ -1,0 +1,43 @@
+name: pdfsense
+
+services:
+  mongodb:
+    image: mongo:8.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - pdfsense_mongodb:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+    image: pdfsense:local
+    init: true
+    ports:
+      - "7860:7860"
+    env_file:
+      - backend/.env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 7860
+      UPLOAD_DIR: /app/uploads
+      VECTOR_STORE_DIR: /app/vector_store
+      MONGODB_URI: mongodb://mongodb:27017
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - pdfsense_uploads:/app/uploads
+      - pdfsense_vectors:/app/vector_store
+    restart: unless-stopped
+
+volumes:
+  pdfsense_uploads:
+  pdfsense_vectors:
+  pdfsense_mongodb:

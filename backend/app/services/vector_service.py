@@ -15,7 +15,6 @@ import numpy as np
 from app.core.config import settings
 from app.services.embedding_service import embed_documents
 
-
 INDEX_FILENAME = "index.faiss"
 METADATA_FILENAME = "metadata.json"
 METADATA_SCHEMA_VERSION = 1

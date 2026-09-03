@@ -27,7 +27,7 @@ function SummaryContent({ content }) {
   )
 }
 
-function SummaryPanel({ document }) {
+function SummaryPanel({ document, onQuotaChange }) {
   const [detail, setDetail] = useState('brief')
   const [summary, setSummary] = useState('')
   const [loading, setLoading] = useState(false)
@@ -45,6 +45,7 @@ function SummaryPanel({ document }) {
       setError(requestError.message)
     } finally {
       setLoading(false)
+      onQuotaChange?.()
     }
   }
 

@@ -19,6 +19,7 @@ from app.services.embedding_service import (
     EmbeddingConfigurationError,
     EmbeddingGenerationError,
 )
+from tests.fakes import install_test_auth, remove_test_auth
 from tests.test_document_ingestion import make_pdf
 
 
@@ -39,10 +40,12 @@ class RetrievalAPITests(unittest.TestCase):
             side_effect=self._document_embeddings,
         )
         self.document_embedding_patcher.start()
+        self.account_repository = install_test_auth(app)
         self.client = TestClient(app)
 
     def tearDown(self) -> None:
         self.client.close()
+        remove_test_auth(app)
         self.document_embedding_patcher.stop()
         settings.upload_dir = self.previous_upload_dir
         settings.vector_store_dir = self.previous_vector_store_dir

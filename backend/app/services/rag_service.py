@@ -9,7 +9,6 @@ from app.core.config import settings
 from app.services.llm_service import LLMResponseError, generate_json_completion
 from app.services.retrieval_service import SearchResult, search_document
 
-
 NOT_FOUND_SENTINEL = "NOT_FOUND"
 NOT_FOUND_ANSWER = "The answer was not found in this document."
 
@@ -52,10 +51,11 @@ def _build_user_prompt(query: str, results: list[SearchResult]) -> tuple[str, di
             f"SOURCE {source_id} (page {result.page_number})\n{result.excerpt}"
         )
 
+    joined_sources = "\n\n".join(source_blocks)
     prompt = (
         f"QUESTION\n{query.strip()}\n\n"
         "BEGIN UNTRUSTED DOCUMENT SOURCES\n"
-        f"{'\n\n'.join(source_blocks)}\n"
+        f"{joined_sources}\n"
         "END UNTRUSTED DOCUMENT SOURCES"
     )
     return prompt, sources

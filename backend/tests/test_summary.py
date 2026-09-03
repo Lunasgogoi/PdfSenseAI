@@ -22,6 +22,7 @@ from app.services.llm_service import (
     LLMResponseError,
     LLMTimeoutError,
 )
+from tests.fakes import install_test_auth, remove_test_auth
 from tests.test_document_ingestion import make_pdf
 
 
@@ -42,10 +43,12 @@ class SummaryAPITests(unittest.TestCase):
             side_effect=self._fake_embeddings,
         )
         self.embedding_patcher.start()
+        self.account_repository = install_test_auth(app)
         self.client = TestClient(app)
 
     def tearDown(self) -> None:
         self.client.close()
+        remove_test_auth(app)
         self.embedding_patcher.stop()
         settings.upload_dir = self.previous_upload_dir
         settings.vector_store_dir = self.previous_vector_store_dir

@@ -1,18 +1,18 @@
 """PDF upload API routes."""
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+import logging
+
+from fastapi import APIRouter, File, UploadFile
 from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
 
-from app.services.pdf_service import (
-    InvalidPDFError,
-    PDFTooLargeError,
-    PDFProcessingError,
-    UnsupportedFileError,
-    process_pdf_upload,
-)
-
+from app.core.dependencies import CurrentUser, Repository
+from app.services.account_service import AccountServiceError
+from app.services.document_service import delete_document, get_document
+from app.services.pdf_service import process_pdf_upload
 
 router = APIRouter(prefix="/api", tags=["documents"])
+logger = logging.getLogger("pdfsense.upload")
 
 
 class UploadPDFResponse(BaseModel):
@@ -27,31 +27,30 @@ class UploadPDFResponse(BaseModel):
 
 
 @router.post("/upload", response_model=UploadPDFResponse)
-async def upload_pdf(file: UploadFile = File(...)) -> UploadPDFResponse:
+async def upload_pdf(
+    user: CurrentUser,
+    repository: Repository,
+    file: UploadFile = File(...),
+) -> UploadPDFResponse:
     """Upload a PDF and run extraction and text chunking."""
 
+    await run_in_threadpool(repository.reserve_document_slot, user.user_id)
+    result = None
     try:
         result = await process_pdf_upload(file)
-    except UnsupportedFileError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail=str(exc),
-        ) from exc
-    except PDFTooLargeError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-            detail=str(exc),
-        ) from exc
-    except InvalidPDFError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=str(exc),
-        ) from exc
-    except PDFProcessingError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        ) from exc
+        manifest = await run_in_threadpool(get_document, result.document_id)
+        await run_in_threadpool(repository.add_document, user.user_id, manifest)
+    except Exception:
+        if result is not None:
+            try:
+                await run_in_threadpool(delete_document, result.document_id)
+            except Exception:
+                logger.exception("orphaned_document_cleanup_failed")
+        try:
+            await run_in_threadpool(repository.release_document_slot, user.user_id)
+        except AccountServiceError:
+            logger.exception("document_quota_release_failed")
+        raise
     finally:
         await file.close()
 

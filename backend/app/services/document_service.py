@@ -11,7 +11,6 @@ from uuid import UUID, uuid4
 
 from app.core.config import settings
 
-
 MANIFEST_FILENAME = "manifest.json"
 CHUNKS_FILENAME = "chunks.json"
 SOURCE_FILENAME = "source.pdf"

@@ -10,7 +10,6 @@ from numpy.typing import NDArray
 
 from app.core.config import settings
 
-
 FloatMatrix = NDArray[np.float32]
 FloatVector = NDArray[np.float32]
 

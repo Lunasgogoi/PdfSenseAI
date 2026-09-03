@@ -3,18 +3,16 @@
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, Response, status
 from pydantic import BaseModel, Field
 
+from app.core.dependencies import CurrentUser, Repository
 from app.services.document_service import (
     DocumentManifest,
     DocumentNotFoundError,
-    DocumentStorageError,
     delete_document,
     get_document,
-    list_documents,
 )
-
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
@@ -43,47 +41,42 @@ def _response_from_manifest(manifest: DocumentManifest) -> DocumentResponse:
     )
 
 
-def _storage_error(exc: DocumentStorageError) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=str(exc),
-    )
-
-
 @router.get("", response_model=DocumentListResponse)
-def get_documents() -> DocumentListResponse:
-    try:
-        documents = list_documents()
-    except DocumentStorageError as exc:
-        raise _storage_error(exc) from exc
+def get_documents(user: CurrentUser, repository: Repository) -> DocumentListResponse:
+    documents: list[DocumentManifest] = []
+    for document_id in repository.list_owned_document_ids(user.user_id):
+        try:
+            documents.append(get_document(document_id))
+        except DocumentNotFoundError:
+            # Reconcile stale metadata after an ephemeral filesystem reset.
+            repository.remove_document(user.user_id, document_id)
     return DocumentListResponse(
         documents=[_response_from_manifest(document) for document in documents]
     )
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
-def get_document_details(document_id: UUID) -> DocumentResponse:
-    try:
-        document = get_document(str(document_id))
-    except DocumentNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-    except DocumentStorageError as exc:
-        raise _storage_error(exc) from exc
+def get_document_details(
+    document_id: UUID,
+    user: CurrentUser,
+    repository: Repository,
+) -> DocumentResponse:
+    repository.assert_document_owner(user.user_id, str(document_id))
+    document = get_document(str(document_id))
     return _response_from_manifest(document)
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_document(document_id: UUID) -> Response:
+def remove_document(
+    document_id: UUID,
+    user: CurrentUser,
+    repository: Repository,
+) -> Response:
+    repository.assert_document_owner(user.user_id, str(document_id))
     try:
         delete_document(str(document_id))
-    except DocumentNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-    except DocumentStorageError as exc:
-        raise _storage_error(exc) from exc
+    except DocumentNotFoundError:
+        # The ownership record can outlive ephemeral deployment storage.
+        pass
+    repository.remove_document(user.user_id, str(document_id))
     return Response(status_code=status.HTTP_204_NO_CONTENT)

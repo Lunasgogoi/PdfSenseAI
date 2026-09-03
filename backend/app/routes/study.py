@@ -3,26 +3,16 @@
 from typing import Self
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter
 from pydantic import BaseModel, Field, model_validator
 
 from app.core.config import settings
-from app.services.document_service import DocumentNotFoundError, DocumentStorageError
-from app.services.llm_service import (
-    LLMConfigurationError,
-    LLMProviderError,
-    LLMRateLimitError,
-    LLMResponseError,
-    LLMTimeoutError,
-)
+from app.core.dependencies import CurrentUser, Repository
 from app.services.study_service import (
-    Flashcard,
     MCQ,
-    StudyDocumentNotReadyError,
-    StudyServiceError,
+    Flashcard,
     generate_study_materials,
 )
-
 
 router = APIRouter(prefix="/api", tags=["study"])
 
@@ -50,36 +40,21 @@ class StudyResponse(BaseModel):
 
 
 @router.post("/study", response_model=StudyResponse)
-def create_study_materials(request: StudyRequest) -> StudyResponse:
+def create_study_materials(
+    request: StudyRequest,
+    user: CurrentUser,
+    repository: Repository,
+) -> StudyResponse:
     """Generate validated MCQs and flashcards for a ready document."""
 
-    try:
-        materials = generate_study_materials(
-            str(request.document_id),
-            request.mcq_count,
-            request.flashcard_count,
-        )
-    except DocumentNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    except StudyDocumentNotReadyError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-    except LLMConfigurationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-        ) from exc
-    except LLMRateLimitError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=str(exc),
-        ) from exc
-    except (LLMProviderError, LLMTimeoutError, LLMResponseError) as exc:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
-    except (DocumentStorageError, StudyServiceError) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        ) from exc
+    document_id = str(request.document_id)
+    repository.assert_document_owner(user.user_id, document_id)
+    repository.consume_ai_request(user.user_id)
+    materials = generate_study_materials(
+        document_id,
+        request.mcq_count,
+        request.flashcard_count,
+    )
 
     return StudyResponse(
         document_id=request.document_id,

@@ -3,6 +3,7 @@ import axios from 'axios'
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   timeout: 120_000,
+  withCredentials: true,
 })
 
 function errorMessage(error) {
@@ -25,8 +26,37 @@ async function request(operation) {
   try {
     return await operation()
   } catch (error) {
+    const publicError = new Error(errorMessage(error), { cause: error })
+    publicError.status = error.response?.status
+    publicError.code = error.response?.data?.code
+    throw publicError
+  }
+}
+
+export async function getCurrentUser() {
+  try {
+    const response = await api.get('/auth/me')
+    return response.data
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 401) return null
     throw new Error(errorMessage(error), { cause: error })
   }
+}
+
+export async function registerAccount(email, password) {
+  const response = await request(() =>
+    api.post('/auth/register', { email, password }),
+  )
+  return response.data.user
+}
+
+export async function loginAccount(email, password) {
+  const response = await request(() => api.post('/auth/login', { email, password }))
+  return response.data.user
+}
+
+export async function logoutAccount() {
+  await request(() => api.post('/auth/logout'))
 }
 
 export async function listDocuments() {
@@ -57,6 +87,17 @@ export async function askDocument(documentId, query) {
     api.post('/chat', { document_id: documentId, query }),
   )
   return response.data
+}
+
+export async function getChatHistory(documentId) {
+  const response = await request(() =>
+    api.get(`/documents/${documentId}/chat-history`),
+  )
+  return response.data
+}
+
+export async function clearChatHistory(documentId) {
+  await request(() => api.delete(`/documents/${documentId}/chat-history`))
 }
 
 export async function summarizeDocument(documentId, detail) {
