@@ -155,9 +155,9 @@ function App() {
 
   if (sessionLoading) {
     return (
-      <div className="grid min-h-screen place-items-center bg-slate-950 text-white">
-        <div className="flex items-center gap-3 text-sm font-bold">
-          <LoaderCircle className="animate-spin text-violet-400" size={20} />
+      <div className="grid min-h-screen place-items-center bg-[#172033] text-slate-100">
+        <div className="flex items-center gap-3 text-sm font-medium">
+          <LoaderCircle className="animate-spin text-indigo-300" size={20} />
           Opening PdfSense…
         </div>
       </div>
@@ -167,7 +167,7 @@ function App() {
   if (!user) return <AuthScreen onAuthenticated={handleAuthenticated} />
 
   return (
-    <div className="min-h-screen bg-[#f5f6f8] text-slate-900">
+    <div className="min-h-screen bg-[#eef1f4] text-slate-600">
       <div className="mx-auto flex min-h-screen max-w-[1800px]">
         <DocumentSidebar
           documents={documents}
@@ -196,7 +196,7 @@ function App() {
         )}
 
         <main className="flex min-h-screen min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 flex min-h-20 items-center justify-between border-b border-slate-200/80 bg-[#f5f6f8]/90 px-4 backdrop-blur-xl sm:px-7 lg:px-10">
+          <header className="sticky top-0 z-20 flex min-h-20 items-center justify-between border-b border-slate-200/60 bg-[#eef1f4]/90 px-4 backdrop-blur-xl sm:px-7 lg:px-10">
             <div className="flex min-w-0 items-center gap-3">
               <button
                 type="button"
@@ -207,10 +207,10 @@ function App() {
                 <Menu size={19} />
               </button>
               <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-violet-600">
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-indigo-400">
                   Workspace
                 </p>
-                <h1 className="truncate text-base font-bold text-slate-900 sm:text-lg">
+                <h1 className="truncate text-base font-semibold text-slate-700 sm:text-lg">
                   {selectedDocument?.filename ?? 'Document intelligence'}
                 </h1>
               </div>
@@ -218,10 +218,10 @@ function App() {
 
             <div className="flex items-center gap-2">
               <div className="hidden text-right md:block">
-                <p className="max-w-48 truncate text-xs font-bold text-slate-700">{user.email}</p>
-                <p className="text-[10px] font-semibold text-slate-400">{user.quota.daily_ai_remaining} AI requests left today</p>
+                <p className="max-w-48 truncate text-sm font-medium text-slate-600">{user.email}</p>
+                <p className="text-xs text-slate-400">{user.quota.daily_ai_remaining} requests left today</p>
               </div>
-              <button type="button" aria-label="Sign out" title="Sign out" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-rose-200 hover:text-rose-600" onClick={handleLogout}>
+              <button type="button" aria-label="Sign out" title="Sign out" className="grid size-10 place-items-center rounded-xl border border-slate-200/80 bg-white/80 text-slate-500 shadow-sm transition hover:border-rose-200 hover:bg-white hover:text-rose-600" onClick={handleLogout}>
                 <LogOut size={17} />
               </button>
             </div>
@@ -236,7 +236,7 @@ function App() {
             />
           ) : (
             <div className="flex min-h-0 flex-1 flex-col">
-              <div className="border-b border-slate-200/80 px-4 sm:px-7 lg:px-10">
+              <div className="border-b border-slate-200/50 bg-white/20 px-4 sm:px-7 lg:px-10">
                 <div className="flex items-center gap-1 overflow-x-auto py-3">
                   {tabs.map((tab) => {
                     const Icon = tab.icon
@@ -245,10 +245,10 @@ function App() {
                       <button
                         key={tab.id}
                         type="button"
-                        className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
+                        className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition ${
                           active
-                            ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/15'
-                            : 'text-slate-500 hover:bg-white hover:text-slate-900'
+                            ? 'border-slate-200/70 bg-[#f7f8fa] text-indigo-600 shadow-sm shadow-slate-200/30'
+                            : 'border-transparent text-slate-400 hover:bg-white/45 hover:text-slate-600'
                         }`}
                         onClick={() => setActiveTab(tab.id)}
                       >

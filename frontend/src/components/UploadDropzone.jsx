@@ -14,10 +14,10 @@ function UploadDropzone({ onUpload, uploading, progress, compact = false }) {
     <div
       className={`group relative overflow-hidden rounded-2xl border border-dashed transition ${
         dragging
-          ? 'border-violet-400 bg-violet-50'
+          ? 'border-indigo-400 bg-indigo-50'
           : compact
-            ? 'border-slate-600 bg-slate-800/70 hover:border-violet-400'
-            : 'border-slate-300 bg-white/75 hover:border-violet-400 hover:bg-white'
+            ? 'border-slate-600/70 bg-white/[0.045] hover:border-indigo-400/80 hover:bg-white/[0.07]'
+            : 'border-slate-300/80 bg-white/75 hover:border-indigo-400 hover:bg-white'
       } ${compact ? 'p-4' : 'p-7 sm:p-9'}`}
       onDragEnter={(event) => {
         event.preventDefault()
@@ -46,8 +46,8 @@ function UploadDropzone({ onUpload, uploading, progress, compact = false }) {
         <div
           className={`grid shrink-0 place-items-center rounded-2xl ${
             compact
-              ? 'size-10 bg-violet-500/15 text-violet-300'
-              : 'mb-4 size-14 bg-violet-100 text-violet-600 shadow-[0_10px_30px_rgba(124,58,237,0.15)]'
+              ? 'size-10 bg-indigo-400/15 text-indigo-300'
+              : 'mb-4 size-14 bg-indigo-50 text-indigo-500 shadow-[0_10px_30px_rgba(99,102,241,0.12)]'
           }`}
         >
           {uploading ? (
@@ -60,10 +60,10 @@ function UploadDropzone({ onUpload, uploading, progress, compact = false }) {
         </div>
 
         <div className={compact ? 'min-w-0 flex-1' : ''}>
-          <p className={`font-bold ${compact ? 'text-sm text-white' : 'text-base text-slate-900'}`}>
+          <p className={`font-medium ${compact ? 'text-sm text-slate-100' : 'text-base text-slate-800'}`}>
             {uploading ? 'Processing your PDF' : compact ? 'Add a PDF' : 'Drop a PDF here'}
           </p>
-          <p className={`mt-1 text-xs ${compact ? 'text-slate-400' : 'text-slate-500'}`}>
+          <p className={`mt-1 text-sm ${compact ? 'text-slate-400' : 'text-slate-500'}`}>
             {uploading
               ? 'Extracting text and building the index'
               : compact
@@ -75,7 +75,7 @@ function UploadDropzone({ onUpload, uploading, progress, compact = false }) {
         {!compact && !uploading && (
           <button
             type="button"
-            className="mt-5 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-violet-700"
+            className="mt-5 rounded-xl bg-[#26344d] px-5 py-2.5 text-sm font-medium text-white shadow-md shadow-slate-900/10 transition hover:-translate-y-0.5 hover:bg-indigo-700"
             onClick={() => inputRef.current?.click()}
           >
             Choose PDF
@@ -96,11 +96,11 @@ function UploadDropzone({ onUpload, uploading, progress, compact = false }) {
         <div className={`${compact ? 'mt-3' : 'mx-auto mt-5 max-w-sm'}`}>
           <div className={`h-1.5 overflow-hidden rounded-full ${compact ? 'bg-slate-700' : 'bg-slate-200'}`}>
             <div
-              className="h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-400 transition-[width] duration-300"
+              className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-sky-400 transition-[width] duration-300"
               style={{ width: `${Math.max(progress, 6)}%` }}
             />
           </div>
-          <p className={`mt-2 text-right text-[11px] font-bold ${compact ? 'text-slate-400' : 'text-slate-500'}`}>
+          <p className={`mt-2 text-right text-xs ${compact ? 'text-slate-400' : 'text-slate-500'}`}>
             {progress < 100 ? `${progress}% uploaded` : 'Creating embeddings…'}
           </p>
         </div>
